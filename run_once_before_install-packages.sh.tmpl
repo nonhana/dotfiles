@@ -3,7 +3,6 @@
 {{ end -}}
 # ============================================================
 # chezmoi run_once_before — 按平台安装 CLI 工具链
-# 在 dotfiles 应用之前执行，确保工具都就位
 # ============================================================
 set -eu
 
@@ -15,20 +14,13 @@ if ! command -v brew >/dev/null 2>&1; then
     echo "❌ Homebrew not found. Install it first: https://brew.sh"
     exit 1
 fi
-
 echo "📦 Installing via Homebrew..."
-
-brew install \
-    ripgrep fd bat eza zoxide fish starship git-delta dust fzf \
-    procs choose-rust sd rip2 \
-    hyperfine ast-grep gping tealdeer just shfmt
-
+brew install ripgrep fd bat eza zoxide fish starship git-delta dust fzf \
+    procs choose-rust sd rip2 hyperfine ast-grep gping tealdeer just shfmt
 brew install lazygit helix neovim tmux btop
-brew install httpie
-brew install pandoc
+brew install httpie pandoc
 brew install node go python rust
 brew install chezmoi git-lfs
-
 echo "✅ macOS packages installed."
 {{ end -}}
 
@@ -42,42 +34,46 @@ sudo apt install -y \
     btop httpie tealdeer just sd hyperfine \
     ast-grep shfmt pandoc gping \
     nodejs golang python3 rustc cargo
-
 if command -v fdfind >/dev/null 2>&1 && ! command -v fd >/dev/null 2>&1; then
     sudo ln -sf "$(which fdfind)" /usr/local/bin/fd
 fi
-
 echo "✅ Linux packages installed."
 {{ end -}}
 
 {{ if env "TERMUX_VERSION" -}}
 # ========== Termux (Android) ==========
 echo "📦 Installing via pkg..."
-
 pkg update && pkg upgrade -y
 
+# 启用 root-repo（btop 需要）
+pkg install -y root-repo
+
+# 核心工具链
 pkg install -y \
     ripgrep fd bat eza zoxide fish starship git-delta dust fzf \
-    lazygit helix neovim tmux btop \
-    httpie tealdeer just sd hyperfine \
-    ast-grep shfmt pandoc gping \
+    lazygit helix neovim tmux \
+    tealdeer just sd hyperfine \
+    shfmt pandoc gping \
     nodejs golang python rust
 
-pkg install -y tsu termux-api
+# root-repo 包
+pkg install -y btop tsu termux-api
 
-if ! command -v procs >/dev/null 2>&1; then
-    echo "🦀 cargo install procs..."
-    cargo install procs
-fi
-if ! command -v choose >/dev/null 2>&1; then
-    echo "🦀 cargo install choose (choose-rust)..."
-    cargo install choose
-fi
-if ! command -v rip2 >/dev/null 2>&1; then
-    echo "🦀 cargo install rip2..."
-    cargo install rip2
+# httpie: 不走 pkg，走 pip
+if ! command -v http >/dev/null 2>&1; then
+    echo "🐍 pip install httpie..."
+    pip install httpie
 fi
 
+# cargo 小众工具
+for tool in procs choose rip2 ast-grep; do
+    if ! command -v "$tool" >/dev/null 2>&1; then
+        echo "🦀 cargo install $tool..."
+        cargo install "$tool"
+    fi
+done
+
+# 设 fish 为默认 shell
 if command -v fish >/dev/null 2>&1; then
     CURRENT_SHELL="$(basename "$SHELL")"
     if [ "$CURRENT_SHELL" != "fish" ]; then
@@ -85,7 +81,6 @@ if command -v fish >/dev/null 2>&1; then
         chsh -s "$(which fish)"
     fi
 fi
-
 echo "✅ Termux packages installed."
 {{ end -}}
 
