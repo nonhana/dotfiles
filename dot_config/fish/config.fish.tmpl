@@ -49,8 +49,9 @@ abbr -a gc 'git commit -m'
 abbr -a gp 'git push'
 abbr -a gl 'git pull'
 
-# Hermes Agent — ensure ~/.local/bin is on PATH
+# Ensure local & cargo bins are on PATH
 fish_add_path "$HOME/.local/bin"
+fish_add_path "$HOME/.cargo/bin"
 
 {{ if eq .chezmoi.os "darwin" -}}
 # >>> otty shell integration >>> (macOS only)

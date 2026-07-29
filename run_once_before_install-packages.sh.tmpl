@@ -35,7 +35,7 @@ sudo apt install -y \
     ast-grep shfmt pandoc gping \
     nodejs golang python3 rustc cargo
 if command -v fdfind >/dev/null 2>&1 && ! command -v fd >/dev/null 2>&1; then
-    sudo ln -sf "$(which fdfind)" /usr/local/bin/fd
+    sudo ln -sf "$(command -v fdfind)" /usr/local/bin/fd
 fi
 echo "✅ Linux packages installed."
 {{ end -}}
@@ -78,7 +78,7 @@ if command -v fish >/dev/null 2>&1; then
     CURRENT_SHELL="$(basename "$SHELL")"
     if [ "$CURRENT_SHELL" != "fish" ]; then
         echo "🐟 Setting fish as default shell..."
-        chsh -s "$(which fish)"
+        chsh -s "$(command -v fish)"
     fi
 fi
 echo "✅ Termux packages installed."
