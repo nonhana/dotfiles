@@ -1,0 +1,105 @@
+#!/bin/bash
+# ============================================================
+# chezmoi run_once_before — 按平台安装 CLI 工具链
+# 在 dotfiles 应用之前执行，确保工具都就位
+# ============================================================
+set -euo pipefail
+
+echo "🔧 Installing CLI toolchain for {{ .chezmoi.os }}..."
+
+{{ if eq .chezmoi.os "darwin" -}}
+# ========== macOS: Homebrew ==========
+if ! command -v brew &>/dev/null; then
+    echo "❌ Homebrew not found. Install it first: https://brew.sh"
+    exit 1
+fi
+
+echo "📦 Installing via Homebrew..."
+
+# 核心工具链（Rust 重写系列）
+brew install \
+    ripgrep fd bat eza zoxide fish starship git-delta dust fzf \
+    procs choose-rust sd rip2 \
+    hyperfine ast-grep gping tealdeer just shfmt
+
+# TUI 全家桶
+brew install lazygit helix neovim tmux btop
+
+# 网络/HTTP
+brew install httpie
+
+# 文档/格式
+brew install pandoc
+
+# 语言运行时
+brew install node go python rust
+
+# 补充
+brew install chezmoi git-lfs
+
+echo "✅ macOS packages installed."
+{{ end -}}
+
+{{ if and (eq .chezmoi.os "linux") (not (eq .chezmoi.os "android")) -}}
+# ========== 通用 Linux: apt ==========
+echo "📦 Installing via apt..."
+sudo apt update
+sudo apt install -y \
+    ripgrep fd-find bat eza zoxide fish starship \
+    git-delta dust fzf lazygit helix neovim tmux \
+    btop httpie tealdeer just sd hyperfine \
+    ast-grep shfmt pandoc gping \
+    nodejs golang python3 rustc cargo
+
+# fd-find 在 Debian 上叫 fdfind, 创建 symlink
+if command -v fdfind &>/dev/null && ! command -v fd &>/dev/null; then
+    sudo ln -sf "$(which fdfind)" /usr/local/bin/fd
+fi
+
+echo "✅ Linux packages installed."
+{{ end -}}
+
+{{ if contains "com.termux" .chezmoi.hostname -}}
+# ========== Termux (Android) ==========
+echo "📦 Installing via pkg..."
+
+pkg update && pkg upgrade -y
+
+# 核心工具链 - pkg 仓库直接装
+pkg install -y \
+    ripgrep fd bat eza zoxide fish starship git-delta dust fzf \
+    lazygit helix neovim tmux btop \
+    httpie tealdeer just sd hyperfine \
+    ast-grep shfmt pandoc gping \
+    nodejs golang python rust
+
+# Termux 专属工具
+pkg install -y tsu termux-api
+
+# 需要 cargo 的小众工具（Termux 仓库未收录）
+if ! command -v procs &>/dev/null; then
+    echo "🦀 cargo install procs..."
+    cargo install procs
+fi
+if ! command -v choose &>/dev/null; then
+    echo "🦀 cargo install choose (choose-rust)..."
+    cargo install choose
+fi
+if ! command -v rip2 &>/dev/null; then
+    echo "🦀 cargo install rip2..."
+    cargo install rip2
+fi
+
+# 设 fish 为默认 shell
+if command -v fish &>/dev/null; then
+    CURRENT_SHELL="$(basename "$SHELL")"
+    if [ "$CURRENT_SHELL" != "fish" ]; then
+        echo "🐟 Setting fish as default shell..."
+        chsh -s "$(which fish)"
+    fi
+fi
+
+echo "✅ Termux packages installed."
+{{ end -}}
+
+echo "🎉 All packages installed for {{ .chezmoi.os }}."

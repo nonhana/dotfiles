@@ -1,0 +1,12 @@
+# chezmoi template data — shared across all templates
+# Docs: https://www.chezmoi.io/user-guide/templating/
+
+# Platform detection is automatic via .chezmoi.os, .chezmoi.arch, .chezmoi.hostname.
+# Custom variables below are available as .mydata.* in templates.
+
+mydata:
+  # Set to false on Termux if Nerd Font icons don't render
+  nerd_fonts: true
+
+  # Editor preference: helix or neovim
+  editor: helix

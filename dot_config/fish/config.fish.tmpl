@@ -1,0 +1,61 @@
+{{- /* config.fish — Nea & Hana 酱's fish shell */ -}}
+
+if status is-interactive
+    starship init fish | source
+    {{ if eq .chezmoi.os "darwin" -}}
+    proto activate fish | source
+    {{ end -}}
+    zoxide init fish | source
+end
+
+{{ if eq .chezmoi.os "darwin" -}}
+# macOS: OrbStack
+# Added by OrbStack: command-line tools and integration
+source ~/.orbstack/shell/init2.fish 2>/dev/null || :
+{{ end -}}
+
+# ─── Secrets (API keys etc) ───
+{{ if eq .chezmoi.os "darwin" -}}
+# Loaded from separate private file (not committed to git)
+# Path: ~/.local/share/fish/secrets.fish
+for f in ~/.local/share/fish/secrets.fish
+    test -f $f && source $f
+end
+{{ end -}}
+
+export PATH="$HOME/.local/bin:$PATH"
+
+# ─── Modern CLI aliases (cross-platform) ───
+if type -q eza
+    abbr -a l eza
+    abbr -a ls eza
+    abbr -a ll 'eza -l --icons --git -a'
+    abbr -a lt 'eza --tree --level=2 --icons'
+end
+
+if type -q bat
+    abbr -a cat bat
+    abbr -a catp 'bat -p'
+end
+
+abbr -a .. 'cd ..'
+abbr -a ... 'cd ../..'
+abbr -a .... 'cd ../../..'
+
+abbr -a g git
+abbr -a gs 'git status'
+abbr -a ga 'git add'
+abbr -a gc 'git commit -m'
+abbr -a gp 'git push'
+abbr -a gl 'git pull'
+
+# Hermes Agent — ensure ~/.local/bin is on PATH
+fish_add_path "$HOME/.local/bin"
+
+{{ if eq .chezmoi.os "darwin" -}}
+# >>> otty shell integration >>> (macOS only)
+if test -n "$OTTY_SHELL_INTEGRATION" -a -r "$OTTY_SHELL_INTEGRATION/otty-integration.fish"
+    source "$OTTY_SHELL_INTEGRATION/otty-integration.fish"
+end
+# <<< otty shell integration <<<
+{{ end -}}
