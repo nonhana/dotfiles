@@ -25,14 +25,15 @@ echo "✅ macOS packages installed."
 {{ end -}}
 
 {{ if and (eq .chezmoi.os "linux") (not (env "TERMUX_VERSION")) -}}
-# ========== 通用 Linux: apt（自动检测 root，无需/需 sudo）==========
-echo "📦 Installing via apt..."
+# ========== 通用 Linux: apt + GitHub release ==========
+# 自动检测 root：root 免 sudo，普通用户自动带 sudo
 if [ "$(id -u)" -eq 0 ]; then SUDO=""; else SUDO="sudo"; fi
+echo "📦 Installing via apt..."
 $SUDO apt update
-# apt 里有的包（不含 nodejs：VPS 走 nvm）
+# apt 里有的包（不含 nodejs：VPS 走 nvm；不含 starship/lazygit/helix，单独从 GitHub 装）
 $SUDO apt install -y \
-    ripgrep fd-find bat eza zoxide fish starship \
-    git-delta fzf lazygit helix neovim tmux \
+    ripgrep fd-find bat eza zoxide fish \
+    git-delta fzf neovim tmux \
     btop httpie tealdeer just hyperfine \
     shfmt pandoc \
     golang python3 rustc cargo
@@ -55,6 +56,69 @@ if command -v cargo >/dev/null 2>&1; then
         fi
     done
 fi
+
+# ---- starship / lazygit / helix：noble apt 没有，从 GitHub latest release 动态下载 ----
+# 按架构匹配资源名（.chezmoi.arch: amd64 | arm64）
+{{ if eq .chezmoi.arch "amd64" -}}
+    HELIX_ARCH="x86_64-linux"
+    LAZYGIT_ARCH="linux_x86_64"
+    STARSHIP_ARCH="x86_64-unknown-linux-gnu"
+{{ else if eq .chezmoi.arch "arm64" -}}
+    HELIX_ARCH="aarch64-linux"
+    LAZYGIT_ARCH="linux_arm64"
+    STARSHIP_ARCH="aarch64-unknown-linux-gnu"
+{{ else -}}
+    # 未识别架构：尝试用 cargo 装（Starship 有 cargo 版，helix/lazygit 需编译）
+    HELIX_ARCH=""
+{{ end -}}
+
+# 从 GitHub API 取最新 release 的匹配资源 URL
+gh_latest_url() { # $1=repo  $2=资源匹配正则 → 输出 URL
+    curl -fsSL "https://api.github.com/repos/$1/releases/latest" \
+        | grep browser_download_url | grep -E "$2" | head -1 \
+        | sed -E 's/.*"(https[^"]+)".*/\1/'
+}
+
+install_gh_bin() { # $1=repo  $2=资源名  $3=二进制名  $4=解压后是否带顶层目录名
+    repo="$1"; name="$2"; binname="$3"; toplevel="$4"
+    if command -v "$binname" >/dev/null 2>&1; then
+        echo "✅ $binname 已存在，跳过"
+        return 0
+    fi
+    url="$(gh_latest_url "$repo" "$name")"
+    if [ -z "$url" ]; then
+        echo "⚠️ 未能找到 $repo/$name 的发布资源，跳过 $binname"
+        return 0
+    fi
+    echo "⬇️ $binname ← $url"
+    tmp="$(mktemp -d)"
+    curl -fsSL -o "$tmp/pkg" "$url"
+    case "$url" in
+        *.tar.xz) tar -xJf "$tmp/pkg" -C "$tmp" ;;
+        *.tar.gz|*.tgz) tar -xzf "$tmp/pkg" -C "$tmp" ;;
+    esac
+    found_bin="$(find "$tmp" -type f -name "$binname" -print -quit)"
+    if [ -z "$found_bin" ]; then
+        echo "⚠️ $binname 解压后未找到二进制，跳过"
+        rm -rf "$tmp"; return 0
+    fi
+    install -m 0755 "$found_bin" /usr/local/bin/"$binname"
+    # helix 需要 runtime 目录（Docs: 拷贝到 ~/.config/helix/runtime）
+    if [ "$binname" = "hx" ]; then
+        runtime_dir="$(find "$tmp" -maxdepth 2 -type d -name runtime -print -quit)"
+        if [ -n "$runtime_dir" ]; then
+            mkdir -p /usr/local/share/helix
+            cp -r "$runtime_dir" /usr/local/share/helix/runtime
+        fi
+    fi
+    rm -rf "$tmp"
+    echo "✅ $binname 安装完成"
+}
+
+install_gh_bin "helix-editor/helix" "${HELIX_ARCH:-}" "hx" "1"
+install_gh_bin "jesseduffield/lazygit" "${LAZYGIT_ARCH:-}" "lazygit" "1"
+install_gh_bin "starship/starship" "${STARSHIP_ARCH:-}" "starship" "1"
+
 echo "✅ Linux packages installed."
 {{ end -}}
 
