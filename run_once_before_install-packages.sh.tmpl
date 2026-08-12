@@ -43,6 +43,21 @@ fi
 
 # apt 里没有的 CLI 工具 → cargo install
 # 注意包名/二进制名差异：du-dust→dust, ast-grep→sg, 其余同名
+# 先确保现代 Rust：noble apt 的 cargo 是 1.75(太旧), 装不了 edition2024 (Rust≥1.85) 的包
+echo "🦀 检查 Rust 工具链版本..."
+if command -v cargo >/dev/null 2>&1; then
+    CARGO_VER="$(cargo --version | awk '{print $2}')"   # 如 1.75.0
+    CARGO_MINOR="$(echo "$CARGO_VER" | cut -d. -f2)"    # 如 75
+    if [ -n "$CARGO_MINOR" ] && [ "$CARGO_MINOR" -lt 85 ] 2>/dev/null; then
+        echo "⚠️ 系统 cargo $CARGO_VER 过旧(<1.85), 改用 rustup 装现代 stable Rust"
+        if ! command -v rustup >/dev/null 2>&1; then
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+        fi
+        # rustup 默认装到 ~/.cargo, 这个 /root 下; 加入 PATH
+        export PATH="$HOME/.cargo/bin:$PATH"
+    fi
+fi
+
 if command -v cargo >/dev/null 2>&1; then
     for tool in du-dust sd ast-grep gping procs choose rip2; do
         case "$tool" in
