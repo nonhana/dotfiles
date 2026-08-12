@@ -25,18 +25,19 @@ echo "✅ macOS packages installed."
 {{ end -}}
 
 {{ if and (eq .chezmoi.os "linux") (not (env "TERMUX_VERSION")) -}}
-# ========== 通用 Linux: apt ==========
+# ========== 通用 Linux: apt（自动检测 root，无需/需 sudo）==========
 echo "📦 Installing via apt..."
-sudo apt update
-# apt 里有的包（含 lazydocker/lazygit 等）
-sudo apt install -y \
+if [ "$(id -u)" -eq 0 ]; then SUDO=""; else SUDO="sudo"; fi
+$SUDO apt update
+# apt 里有的包（不含 nodejs：VPS 走 nvm）
+$SUDO apt install -y \
     ripgrep fd-find bat eza zoxide fish starship \
     git-delta fzf lazygit helix neovim tmux \
     btop httpie tealdeer just hyperfine \
     shfmt pandoc \
-    nodejs golang python3 rustc cargo
+    golang python3 rustc cargo
 if command -v fdfind >/dev/null 2>&1 && ! command -v fd >/dev/null 2>&1; then
-    sudo ln -sf "$(command -v fdfind)" /usr/local/bin/fd
+    $SUDO ln -sf "$(command -v fdfind)" /usr/local/bin/fd
 fi
 
 # apt 里没有的 CLI 工具 → cargo install
