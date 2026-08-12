@@ -28,14 +28,31 @@ echo "✅ macOS packages installed."
 # ========== 通用 Linux: apt ==========
 echo "📦 Installing via apt..."
 sudo apt update
+# apt 里有的包（含 lazydocker/lazygit 等）
 sudo apt install -y \
     ripgrep fd-find bat eza zoxide fish starship \
-    git-delta dust fzf lazygit helix neovim tmux \
-    btop httpie tealdeer just sd hyperfine \
-    ast-grep shfmt pandoc gping \
+    git-delta fzf lazygit helix neovim tmux \
+    btop httpie tealdeer just hyperfine \
+    shfmt pandoc \
     nodejs golang python3 rustc cargo
 if command -v fdfind >/dev/null 2>&1 && ! command -v fd >/dev/null 2>&1; then
     sudo ln -sf "$(command -v fdfind)" /usr/local/bin/fd
+fi
+
+# apt 里没有的 CLI 工具 → cargo install
+# 注意包名/二进制名差异：du-dust→dust, ast-grep→sg, 其余同名
+if command -v cargo >/dev/null 2>&1; then
+    for tool in du-dust sd ast-grep gping procs choose rip2; do
+        case "$tool" in
+            du-dust)  bin="dust" ;;
+            ast-grep) bin="sg" ;;
+            *)        bin="$tool" ;;
+        esac
+        if ! command -v "$bin" >/dev/null 2>&1; then
+            echo "🦀 cargo install $tool..."
+            cargo install "$tool"
+        fi
+    done
 fi
 echo "✅ Linux packages installed."
 {{ end -}}
